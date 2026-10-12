@@ -1,0 +1,503 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Маме">
+<meta name="theme-color" content="#F7F0F1">
+<title>Тёплые слова маме</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Marck+Script&family=Nunito:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+/* Layout: one-screen phone app. Three screens (card, reasons, letter) under a floating bottom tab bar.
+   Tabs, flip cards and the hug button work with plain HTML and CSS (hidden radios and checkboxes);
+   the reasons and the letter stay locked until the script opens them on 14 October. */
+:root {
+  color-scheme: light;
+  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+  --bg: #F7F0F1;
+  --surface: #FFFFFF;
+  --fg: #2A1E24;
+  --muted: #6F5B65;
+  --line: #E7D6DB;
+  --glow: rgba(232, 82, 122, 0.12);
+  --accent: #C42B5A;
+  --accent-ink: #FFFFFF;
+  --sage: #5E8A70;
+  --sage-ink: #FFFFFF;
+  --sun: #E8A33D;
+  --sun-ink: #2A1E24;
+  --p1: #E8527A;
+  --p2: #F2A07B;
+  --p3: #F7C3CF;
+  --stem: #5E8A70;
+  --wrap: #D9C7B8;
+  --display: 'Marck Script', 'Snell Roundhand', 'Segoe Script', cursive;
+  --body: 'Nunito', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #1B1317; --surface: #2A1E24; --fg: #F6E9ED; --muted: #BCA5AE; --line: #43323A;
+    --glow: rgba(255, 124, 159, 0.16);
+    --accent: #FF7C9F; --accent-ink: #2A0F18;
+    --sage: #8DBBA0; --sage-ink: #14261B;
+    --sun: #F2B65A; --sun-ink: #2A1E10;
+    --p1: #FF7C9F; --p2: #FFB08A; --p3: #F2B8C6;
+    --stem: #8DBBA0; --wrap: #5A4650;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #1B1317; --surface: #2A1E24; --fg: #F6E9ED; --muted: #BCA5AE; --line: #43323A;
+  --glow: rgba(255, 124, 159, 0.16);
+  --accent: #FF7C9F; --accent-ink: #2A0F18;
+  --sage: #8DBBA0; --sage-ink: #14261B;
+  --sun: #F2B65A; --sun-ink: #2A1E10;
+  --p1: #FF7C9F; --p2: #FFB08A; --p3: #F2B8C6;
+  --stem: #8DBBA0; --wrap: #5A4650;
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  padding-inline: 16px;
+  padding-block: 8px 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  font-family: var(--body);
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--fg);
+  background: radial-gradient(120% 55% at 50% 0%, var(--glow), transparent 70%), var(--bg);
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+}
+button { font: inherit; color: inherit; }
+label { -webkit-user-select: none; user-select: none; }
+
+/* Hidden state holders: three tab radios and the hug checkbox */
+.sr { position: absolute; width: 1px; height: 1px; margin: 0; opacity: 0; overflow: hidden; pointer-events: none; }
+#t-card:focus-visible ~ nav .tab[for="t-card"],
+#t-reasons:focus-visible ~ nav .tab[for="t-reasons"],
+#t-letter:focus-visible ~ nav .tab[for="t-letter"],
+#hugA:focus-visible ~ main .primary.hugA,
+#hugB:focus-visible ~ main .primary.hugB { outline: 3px solid var(--accent); outline-offset: 3px; }
+
+main { flex: 1 1 auto; min-height: 0; position: relative; }
+.screen {
+  display: none;
+  height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding-block: 4px 16px;
+  text-align: center;
+}
+#t-card:checked ~ main #s-card,
+#t-reasons:checked ~ main #s-reasons,
+#t-letter:checked ~ main #s-letter { display: flex; }
+html:not(.open) #t-reasons:checked ~ main #s-reasons,
+html:not(.open) #t-letter:checked ~ main #s-letter { display: none; }
+html:not(.open) #t-reasons:checked ~ main #s-lock,
+html:not(.open) #t-letter:checked ~ main #s-lock { display: flex; }
+
+/* Screen change: each block of the new screen rises in, one after another */
+.screen > * { animation: itemIn 0.5s cubic-bezier(.2,.8,.2,1) backwards; }
+.screen > :nth-child(2) { animation-delay: 70ms; }
+.screen > :nth-child(3) { animation-delay: 140ms; }
+.screen > :nth-child(4) { animation-delay: 210ms; }
+.screen > :nth-child(5) { animation-delay: 280ms; }
+.screen > .rgrid { animation: none; }
+.rgrid .rcard { animation: itemIn 0.5s cubic-bezier(.2,.8,.2,1) backwards; }
+.rgrid .rcard:nth-child(1) { animation-delay: 120ms; }
+.rgrid .rcard:nth-child(2) { animation-delay: 180ms; }
+.rgrid .rcard:nth-child(3) { animation-delay: 240ms; }
+.rgrid .rcard:nth-child(4) { animation-delay: 300ms; }
+.rgrid .rcard:nth-child(5) { animation-delay: 360ms; }
+.rgrid .rcard:nth-child(6) { animation-delay: 420ms; }
+@keyframes itemIn { from { opacity: 0; transform: translateY(18px) scale(0.97); } to { opacity: 1; transform: none; } }
+
+/* Cover */
+.eyebrow { margin: 0; padding-block: 10px 0; font-weight: 800; font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+.bouquetwrap { position: relative; width: 100%; }
+.overlay { position: absolute; top: 0; right: 0; bottom: 0; left: 0; z-index: 2; cursor: pointer; }
+/* Hug controls come in pairs tied to radios A and B. Only the one that can still change the state is shown,
+   so every tap plays the animation again, with or without the script. */
+.hugB, .primary.hugB { display: none; }
+#hugA:checked ~ main .hugA { display: none; }
+#hugA:checked ~ main .overlay.hugB { display: block; }
+#hugA:checked ~ main .primary.hugB { display: inline-flex; }
+.bouquet { display: block; width: 100%; height: min(34vh, 290px); height: min(34dvh, 290px); min-height: 150px; }
+.bouquet .stem { fill: none; stroke: var(--stem); stroke-width: 4; stroke-linecap: round; }
+.bouquet .leaf { fill: var(--stem); }
+.bouquet .petal { stroke: var(--bg); stroke-width: 1.2; }
+.bouquet .f1 { fill: var(--p1); }
+.bouquet .f2 { fill: var(--p2); }
+.bouquet .f3 { fill: var(--p3); }
+.bouquet .core { fill: var(--sun); }
+.bouquet .wrap { fill: var(--wrap); }
+.bouquet .ribbon { fill: var(--accent); }
+.sway { transform-origin: 160px 290px; animation: sway 5s ease-in-out infinite alternate; }
+.bloom { transform-box: fill-box; transform-origin: center; animation: bloom 0.9s cubic-bezier(.2,.8,.2,1) both; }
+@keyframes sway { from { transform: rotate(-1.8deg); } to { transform: rotate(1.8deg); } }
+@keyframes bloom { from { transform: scale(0.82); } to { transform: scale(1); } }
+
+h1, h2 { font-family: var(--display); font-weight: 400; margin: 0; text-wrap: balance; color: var(--accent); }
+h1 { font-size: clamp(2.6rem, 13vw, 3.6rem); line-height: 1.05; }
+h2 { font-size: clamp(2.1rem, 10vw, 2.7rem); line-height: 1.1; }
+.lead { margin: 0; font-size: 1.12rem; font-weight: 600; text-wrap: balance; }
+.count {
+  margin: 0; padding: 6px 16px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line);
+  font-size: 0.9rem; color: var(--muted); font-variant-numeric: tabular-nums;
+}
+.count:empty { display: none; }
+.primary {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-height: 52px; padding: 0 30px; border: 0; border-radius: 999px; cursor: pointer;
+  background: var(--accent); color: var(--accent-ink); font-weight: 800; font-size: 1rem;
+  transition: transform 0.15s ease;
+}
+.primary:active { transform: scale(0.96); }
+
+/* Reasons */
+.hint { margin: 0; color: var(--muted); font-size: 0.95rem; font-variant-numeric: tabular-nums; }
+.rgrid { width: 100%; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.rcard { position: relative; display: block; aspect-ratio: 5 / 6; max-width: 100%; cursor: pointer; perspective: 900px; -webkit-perspective: 900px; }
+.flip { position: absolute; inset: 0; z-index: 2; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.rcard .inner { position: absolute; inset: 0; transform-style: preserve-3d; -webkit-transform-style: preserve-3d; transition: transform 0.55s cubic-bezier(.3,.7,.2,1); }
+.flip:checked + .inner { transform: rotateY(180deg); }
+.flip:focus-visible + .inner .face { outline: 3px solid var(--accent); outline-offset: 3px; }
+.face {
+  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 8px; padding: 14px; border-radius: 20px; min-width: 0;
+  backface-visibility: hidden; -webkit-backface-visibility: hidden;
+}
+.front .word { font-family: var(--display); font-size: 1.9rem; line-height: 1.05; }
+.front .tap { font-size: 0.7rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.85; }
+.k-accent .front { background: var(--accent); color: var(--accent-ink); }
+.k-sage .front { background: var(--sage); color: var(--sage-ink); }
+.k-sun .front { background: var(--sun); color: var(--sun-ink); }
+.back { transform: rotateY(180deg); -webkit-transform: rotateY(180deg); background: var(--surface); border: 1px solid var(--line); font-weight: 600; font-size: 0.93rem; line-height: 1.45; }
+.done { display: none; width: 100%; flex-direction: column; align-items: center; gap: 10px; padding-block: 6px; }
+.done p { margin: 0; font-weight: 600; }
+.reasons.all-open .done { display: flex; }
+.reasons:not(:has(.flip:not(:checked))) .done { display: flex; }
+
+/* Letter */
+.letter {
+  width: 100%; background: var(--surface); border: 1px solid var(--line); border-radius: 22px;
+  padding: 22px 20px; display: flex; flex-direction: column; gap: 14px; text-align: left;
+}
+.letter p { margin: 0; font-size: 1.02rem; line-height: 1.65; max-width: 65ch; }
+.letter .hello { font-family: var(--display); font-size: 2.1rem; line-height: 1.1; color: var(--accent); overflow-wrap: anywhere; }
+.letter .bye { font-family: var(--display); font-size: 1.7rem; line-height: 1.2; overflow-wrap: anywhere; }
+
+/* Lock (shown by the script before 14 October) */
+.lockview { justify-content: center; }
+.lockicon { width: 68px; height: 68px; border-radius: 50%; background: var(--glow); color: var(--accent); display: flex; align-items: center; justify-content: center; }
+.lockicon svg { width: 32px; height: 32px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.lockview .lead { max-width: 26ch; }
+.timer { display: none; width: 100%; max-width: 340px; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+html.js .timer { display: grid; }
+.unit { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 12px 4px; border-radius: 16px; background: var(--surface); border: 1px solid var(--line); }
+.unit .num { font-size: 1.9rem; line-height: 1.1; font-weight: 800; color: var(--accent); font-variant-numeric: tabular-nums; }
+.unit .lbl { font-size: 0.66rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.untilopen { display: none; width: 100%; flex-direction: column; align-items: center; gap: 8px; }
+html.js:not(.open) .untilopen { display: flex; }
+.untilopen .cap { margin: 0; font-size: 0.88rem; font-weight: 800; color: var(--muted); }
+.untilopen .unit { padding: 8px 4px; }
+.untilopen .num { font-size: 1.5rem; }
+html:not(.open) #count { display: none; }
+
+/* Tab bar */
+.tabs {
+  flex: 0 0 auto; margin-block: 8px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+  background: var(--surface); border: 1px solid var(--line); border-radius: 24px; padding: 4px;
+}
+.tab {
+  position: relative; min-height: 54px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  border-radius: 20px; cursor: pointer; color: var(--muted); font-size: 0.72rem; font-weight: 800;
+}
+.tab svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+#t-card:checked ~ nav .tab[for="t-card"],
+#t-reasons:checked ~ nav .tab[for="t-reasons"],
+#t-letter:checked ~ nav .tab[for="t-letter"] { color: var(--accent); background: var(--glow); }
+.tab .badge { display: none; position: absolute; top: 6px; left: calc(50% + 8px); width: 15px; height: 15px; padding: 2px; border-radius: 50%; background: var(--surface); color: var(--accent); stroke-width: 2.4; }
+html:not(.open) .tab .badge { display: block; }
+.tab { transition: color 0.25s ease, background-color 0.25s ease; }
+.tab svg:first-child { transition: transform 0.3s cubic-bezier(.3,1.6,.5,1); }
+#t-card:checked ~ nav .tab[for="t-card"] svg:first-child,
+#t-reasons:checked ~ nav .tab[for="t-reasons"] svg:first-child,
+#t-letter:checked ~ nav .tab[for="t-letter"] svg:first-child { transform: translateY(-2px) scale(1.14); }
+
+/* Hearts and toast */
+.hearts, .hearts-css { position: fixed; top: 0; right: 0; bottom: 0; left: 0; overflow: hidden; pointer-events: none; z-index: 10; }
+.heart { position: absolute; bottom: -40px; width: var(--s); height: var(--s); }
+.heart svg { width: 100%; height: 100%; display: block; }
+.heart.h0 svg { fill: var(--p1); }
+.heart.h1 svg { fill: var(--p2); }
+.heart.h2 svg { fill: var(--sun); }
+.hearts .heart { animation: float var(--d) ease-out var(--w) both; }
+.hearts-css .heart { opacity: 0; }
+#hugA:checked ~ .hearts-css .sa { animation: float var(--d) ease-out var(--w) both; }
+#hugB:checked ~ .hearts-css .sb { animation: float var(--d) ease-out var(--w) both; }
+@keyframes float {
+  from { transform: translate(0, 0) scale(0.6); opacity: 1; }
+  to { transform: translate(var(--x), -88vh) scale(1.1); opacity: 0; }
+}
+.toast {
+  position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%); max-width: 90%;
+  padding: 10px 18px; border-radius: 999px; background: var(--fg); color: var(--bg);
+  font-weight: 800; font-size: 0.92rem; text-align: center; opacity: 0; pointer-events: none; transition: opacity 0.25s ease; z-index: 11;
+}
+.toast.on { opacity: 1; }
+#hugA:checked ~ main .toast.ta,
+#hugB:checked ~ main .toast.tb { animation: toastShow 2.6s ease both; }
+@keyframes toastShow {
+  0% { opacity: 0; transform: translate(-50%, 10px); }
+  12% { opacity: 1; transform: translate(-50%, 0); }
+  80% { opacity: 1; transform: translate(-50%, 0); }
+  100% { opacity: 0; transform: translate(-50%, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+</style>
+</head>
+<body>
+
+<input class="sr" type="radio" name="tab" id="t-card" checked aria-label="Открытка">
+<input class="sr" type="radio" name="tab" id="t-reasons" aria-label="Причины">
+<input class="sr" type="radio" name="tab" id="t-letter" aria-label="Письмо">
+<input class="sr" type="radio" name="hug" id="hugA" aria-label="Обнять крепко">
+<input class="sr" type="radio" name="hug" id="hugB" aria-label="Обнять крепко ещё раз">
+
+<div class="hearts" id="hearts" aria-hidden="true"></div>
+<div class="hearts-css" aria-hidden="true"><span class="heart h0 sa" style="left:35%;--s:21px;--d:3.57s;--w:0.04s;--x:3px"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></span><span class="heart h1 sa" style="left:38%;--s:19px;--d:3.31s;--w:0.02s;--x:-5px"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></span><span class="heart h2 sa" style="left:14%;--s:20px;--d:3.16s;--w:0.41s;--x:-26px"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></span><span class="heart h0 sa" style="left:26%;--s:32px;--d:4.11s;--w:0.29s;--x:-7px"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></span><span class="heart h1 sa" style="left:88%;--s:19px;--d:3.95s;--w:0.14s;--x:-25px"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></span><span class="heart h2 sa" style="left:18%;--s:25px;--d:3.87s;--w:0.09s;--x:6px"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></span><span class="heart h0 sa" style="left:60%;--s:26px;--d:3.39s;--w:0.03s;--x:-31px"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></span><span class="heart h1 sa" style="left:25%;--s:33px;--d:3.17s;--w:0.16s;--x:6px"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></span><span class="heart h2 sa" style="left:45%;--s:25px;--d:3.83s;--w:0.35s;--x:-18px"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></span><span class="heart h0 sa" style="left:55%;--s:30px;--d:3.98s;--w:0.36s;--x:-15px"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></span><span class="heart h1 sa" style="left:88%;--s:21px;--d:3.15s;--w:0.38s;--x:-24px"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></span><span class="heart h2 sa" style="left:48%;--s:19px;--d:3.60s;--w:0.38s;--x:5px"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></span><span class="heart h0 sa" style="left:80%;--s:25px;--d:3.65s;--w:0.30s;--x:6px"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></span><span class="heart h1 sa" style="left:45%;--s:36px;--d:4.10s;--w:0.24s;--x:11px"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></span><span class="heart h0 sb" style="left:13%;--s:33px;--d:3.56s;--w:0.50s;--x:23px"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></span><span class="heart h1 sb" style="left:31%;--s:26px;--d:3.60s;--w:0.01s;--x:-3px"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></span><span class="heart h2 sb" style="left:22%;--s:21px;--d:2.51s;--w:0.38s;--x:-26px"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></span><span class="heart h0 sb" style="left:28%;--s:27px;--d:3.97s;--w:0.04s;--x:-4px"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></span><span class="heart h1 sb" style="left:53%;--s:37px;--d:3.87s;--w:0.43s;--x:-16px"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></span><span class="heart h2 sb" style="left:42%;--s:26px;--d:3.99s;--w:0.48s;--x:-24px"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></span><span class="heart h0 sb" style="left:22%;--s:23px;--d:2.82s;--w:0.24s;--x:6px"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></span><span class="heart h1 sb" style="left:30%;--s:18px;--d:3.15s;--w:0.18s;--x:5px"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></span><span class="heart h2 sb" style="left:86%;--s:33px;--d:3.33s;--w:0.31s;--x:12px"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></span><span class="heart h0 sb" style="left:12%;--s:38px;--d:3.80s;--w:0.44s;--x:21px"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></span><span class="heart h1 sb" style="left:40%;--s:27px;--d:2.59s;--w:0.32s;--x:-31px"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></span><span class="heart h2 sb" style="left:14%;--s:23px;--d:2.69s;--w:0.17s;--x:-31px"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></span><span class="heart h0 sb" style="left:8%;--s:21px;--d:2.58s;--w:0.18s;--x:-33px"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></span><span class="heart h1 sb" style="left:80%;--s:32px;--d:2.67s;--w:0.13s;--x:-11px"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></span></div>
+
+<main>
+  <section class="screen" id="s-card" aria-label="Открытка">
+    <p class="eyebrow" id="eyebrow">14 октября · День матери</p>
+    <div class="bouquetwrap">
+<svg class="bouquet" viewBox="0 0 320 310" aria-hidden="true" focusable="false"><g class="sway"><path class="stem" d="M160 292 Q 160 218 160 96"/><path class="stem" d="M160 292 Q 126 238 92 136"/><path class="stem" d="M160 292 Q 195 236 230 132"/><path class="stem" d="M160 292 Q 136 203 112 66"/><path class="stem" d="M160 292 Q 185 201 210 62"/><ellipse class="leaf" cx="122" cy="182" rx="9" ry="30" transform="rotate(-50 122 182)"/><ellipse class="leaf" cx="200" cy="180" rx="9" ry="30" transform="rotate(50 200 180)"/><g transform="translate(160 96)"><g class="bloom" style="animation-delay:0ms"><ellipse class="petal f1" cx="0" cy="-24.4" rx="12.6" ry="21.0" transform="rotate(0.0)"/><ellipse class="petal f1" cx="0" cy="-24.4" rx="12.6" ry="21.0" transform="rotate(36.0)"/><ellipse class="petal f1" cx="0" cy="-24.4" rx="12.6" ry="21.0" transform="rotate(72.0)"/><ellipse class="petal f1" cx="0" cy="-24.4" rx="12.6" ry="21.0" transform="rotate(108.0)"/><ellipse class="petal f1" cx="0" cy="-24.4" rx="12.6" ry="21.0" transform="rotate(144.0)"/><ellipse class="petal f1" cx="0" cy="-24.4" rx="12.6" ry="21.0" transform="rotate(180.0)"/><ellipse class="petal f1" cx="0" cy="-24.4" rx="12.6" ry="21.0" transform="rotate(216.0)"/><ellipse class="petal f1" cx="0" cy="-24.4" rx="12.6" ry="21.0" transform="rotate(252.0)"/><ellipse class="petal f1" cx="0" cy="-24.4" rx="12.6" ry="21.0" transform="rotate(288.0)"/><ellipse class="petal f1" cx="0" cy="-24.4" rx="12.6" ry="21.0" transform="rotate(324.0)"/><circle class="core" r="10.9"/></g></g><g transform="translate(92 136)"><g class="bloom" style="animation-delay:90ms"><ellipse class="petal f2" cx="0" cy="-19.1" rx="9.9" ry="16.5" transform="rotate(0.0)"/><ellipse class="petal f2" cx="0" cy="-19.1" rx="9.9" ry="16.5" transform="rotate(45.0)"/><ellipse class="petal f2" cx="0" cy="-19.1" rx="9.9" ry="16.5" transform="rotate(90.0)"/><ellipse class="petal f2" cx="0" cy="-19.1" rx="9.9" ry="16.5" transform="rotate(135.0)"/><ellipse class="petal f2" cx="0" cy="-19.1" rx="9.9" ry="16.5" transform="rotate(180.0)"/><ellipse class="petal f2" cx="0" cy="-19.1" rx="9.9" ry="16.5" transform="rotate(225.0)"/><ellipse class="petal f2" cx="0" cy="-19.1" rx="9.9" ry="16.5" transform="rotate(270.0)"/><ellipse class="petal f2" cx="0" cy="-19.1" rx="9.9" ry="16.5" transform="rotate(315.0)"/><circle class="core" r="8.6"/></g></g><g transform="translate(230 132)"><g class="bloom" style="animation-delay:180ms"><ellipse class="petal f3" cx="0" cy="-20.3" rx="10.5" ry="17.5" transform="rotate(0.0)"/><ellipse class="petal f3" cx="0" cy="-20.3" rx="10.5" ry="17.5" transform="rotate(40.0)"/><ellipse class="petal f3" cx="0" cy="-20.3" rx="10.5" ry="17.5" transform="rotate(80.0)"/><ellipse class="petal f3" cx="0" cy="-20.3" rx="10.5" ry="17.5" transform="rotate(120.0)"/><ellipse class="petal f3" cx="0" cy="-20.3" rx="10.5" ry="17.5" transform="rotate(160.0)"/><ellipse class="petal f3" cx="0" cy="-20.3" rx="10.5" ry="17.5" transform="rotate(200.0)"/><ellipse class="petal f3" cx="0" cy="-20.3" rx="10.5" ry="17.5" transform="rotate(240.0)"/><ellipse class="petal f3" cx="0" cy="-20.3" rx="10.5" ry="17.5" transform="rotate(280.0)"/><ellipse class="petal f3" cx="0" cy="-20.3" rx="10.5" ry="17.5" transform="rotate(320.0)"/><circle class="core" r="9.1"/></g></g><g transform="translate(112 66)"><g class="bloom" style="animation-delay:270ms"><ellipse class="petal f3" cx="0" cy="-14.5" rx="7.5" ry="12.5" transform="rotate(0.0)"/><ellipse class="petal f3" cx="0" cy="-14.5" rx="7.5" ry="12.5" transform="rotate(51.4)"/><ellipse class="petal f3" cx="0" cy="-14.5" rx="7.5" ry="12.5" transform="rotate(102.9)"/><ellipse class="petal f3" cx="0" cy="-14.5" rx="7.5" ry="12.5" transform="rotate(154.3)"/><ellipse class="petal f3" cx="0" cy="-14.5" rx="7.5" ry="12.5" transform="rotate(205.7)"/><ellipse class="petal f3" cx="0" cy="-14.5" rx="7.5" ry="12.5" transform="rotate(257.1)"/><ellipse class="petal f3" cx="0" cy="-14.5" rx="7.5" ry="12.5" transform="rotate(308.6)"/><circle class="core" r="6.5"/></g></g><g transform="translate(210 62)"><g class="bloom" style="animation-delay:360ms"><ellipse class="petal f2" cx="0" cy="-15.7" rx="8.1" ry="13.5" transform="rotate(0.0)"/><ellipse class="petal f2" cx="0" cy="-15.7" rx="8.1" ry="13.5" transform="rotate(45.0)"/><ellipse class="petal f2" cx="0" cy="-15.7" rx="8.1" ry="13.5" transform="rotate(90.0)"/><ellipse class="petal f2" cx="0" cy="-15.7" rx="8.1" ry="13.5" transform="rotate(135.0)"/><ellipse class="petal f2" cx="0" cy="-15.7" rx="8.1" ry="13.5" transform="rotate(180.0)"/><ellipse class="petal f2" cx="0" cy="-15.7" rx="8.1" ry="13.5" transform="rotate(225.0)"/><ellipse class="petal f2" cx="0" cy="-15.7" rx="8.1" ry="13.5" transform="rotate(270.0)"/><ellipse class="petal f2" cx="0" cy="-15.7" rx="8.1" ry="13.5" transform="rotate(315.0)"/><circle class="core" r="7.0"/></g></g></g><path class="wrap" d="M88 196 L232 196 L188 304 L132 304 Z"/><path class="ribbon" d="M103 232 L217 232 L210 250 L110 250 Z"/><ellipse class="ribbon" cx="144" cy="241" rx="15" ry="8" transform="rotate(-22 144 241)"/><ellipse class="ribbon" cx="176" cy="241" rx="15" ry="8" transform="rotate(22 176 241)"/><circle class="ribbon" cx="160" cy="241" r="6"/></svg>
+      <label class="overlay hugA" for="hugA" aria-label="Букет. Нажми, чтобы обнять."></label>
+      <label class="overlay hugB" for="hugB" aria-label="Букет. Нажми, чтобы обнять."></label>
+    </div>
+    <h1>С Днём матери!</h1>
+    <p class="lead">Дорогая мама, это тебе.</p>
+    <div class="untilopen">
+      <p class="cap">До открытия письма</p>
+      <div class="timer" role="timer" aria-label="Время до открытия письма">
+        <div class="unit"><span class="num t-d">00</span><span class="lbl l-d">дней</span></div>
+        <div class="unit"><span class="num t-h">00</span><span class="lbl l-h">часов</span></div>
+        <div class="unit"><span class="num t-m">00</span><span class="lbl l-m">минут</span></div>
+        <div class="unit"><span class="num t-s">00</span><span class="lbl l-s">секунд</span></div>
+      </div>
+    </div>
+    <p class="count" id="count"></p>
+    <noscript><p class="count">Нет отсчёта до открытия письма? Открой файл в Safari.</p></noscript>
+    <label class="primary hugA" for="hugA">Обнять крепко</label>
+    <label class="primary hugB" for="hugB">Обнять крепко</label>
+  </section>
+
+  <section class="screen reasons" id="s-reasons" aria-label="Причины">
+    <h2>Почему ты лучшая</h2>
+    <p class="hint" id="progress">Нажимай на карточки.</p>
+    <div class="rgrid">
+      <label class="rcard k-accent"><input class="flip" type="checkbox" aria-label="Тепло"><span class="inner"><span class="face front"><span class="word">Тепло</span><span class="tap">нажми</span></span><span class="face back">Рядом с тобой всегда тепло, даже когда за окном ноябрь.</span></span></label>
+      <label class="rcard k-sage"><input class="flip" type="checkbox" aria-label="Забота"><span class="inner"><span class="face front"><span class="word">Забота</span><span class="tap">нажми</span></span><span class="face back">Ты замечаешь, что мне нужна помощь, раньше, чем я успею попросить.</span></span></label>
+      <label class="rcard k-sun"><input class="flip" type="checkbox" aria-label="Советы"><span class="inner"><span class="face front"><span class="word">Советы</span><span class="tap">нажми</span></span><span class="face back">Твои советы звучат как мелочь, а потом оказываются самыми точными.</span></span></label>
+      <label class="rcard k-accent"><input class="flip" type="checkbox" aria-label="Домашняя еда"><span class="inner"><span class="face front"><span class="word">Домашняя еда</span><span class="tap">нажми</span></span><span class="face back">Твой суп лучше любого ресторана. Рецепт не повторит никто.</span></span></label>
+      <label class="rcard k-sage"><input class="flip" type="checkbox" aria-label="Терпение"><span class="inner"><span class="face front"><span class="word">Терпение</span><span class="tap">нажми</span></span><span class="face back">Ты умеешь ждать, выслушивать и прощать. Мне ещё учиться и учиться.</span></span></label>
+      <label class="rcard k-sun"><input class="flip" type="checkbox" aria-label="Вера"><span class="inner"><span class="face front"><span class="word">Вера</span><span class="tap">нажми</span></span><span class="face back">Когда я сомневаюсь в себе, ты уже в меня веришь.</span></span></label>
+    </div>
+    <div class="done">
+      <p>Это ещё не всё. Дальше самое важное.</p>
+      <label class="primary" for="t-letter">Прочитать письмо</label>
+    </div>
+  </section>
+
+  <section class="screen" id="s-letter" aria-label="Письмо">
+    <article class="letter">
+      <p class="hello">Дорогая мама!</p>
+      <p>Сегодня твой день, и мне хочется сказать то, что обычно откладывается на потом.</p>
+      <p>Спасибо за тёплый дом, в который всегда хочется вернуться. Спасибо за ужины, за советы и за терпение, которого хватает на двоих.</p>
+      <p>Доброте я учусь у тебя каждый день, глядя, как ты заботишься о других.</p>
+      <p>Желаю тебе здоровья, спокойных дней и поводов для улыбки. Пусть рядом всегда будут те, кого ты любишь.</p>
+      <p>Я тебя люблю.</p>
+      <p class="bye">С любовью.<br>От твоего сыночка Никиты</p>
+    </article>
+    <label class="primary hugA" for="hugA">Обнять крепко</label>
+    <label class="primary hugB" for="hugB">Обнять крепко</label>
+  </section>
+
+  <section class="screen lockview" id="s-lock" aria-label="Откроется 14 октября">
+    <div class="lockicon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></div>
+    <h2>Откроется 14 октября</h2>
+    <p class="lead">Тёплые слова ждут своего дня. Загляни сюда в праздник.</p>
+    <div class="timer" role="timer" aria-label="Время до открытия">
+      <div class="unit"><span class="num t-d">00</span><span class="lbl l-d">дней</span></div>
+      <div class="unit"><span class="num t-h">00</span><span class="lbl l-h">часов</span></div>
+      <div class="unit"><span class="num t-m">00</span><span class="lbl l-m">минут</span></div>
+      <div class="unit"><span class="num t-s">00</span><span class="lbl l-s">секунд</span></div>
+    </div>
+    <noscript><p class="count">Не открывается и после 14 октября? Открой файл в Safari.</p></noscript>
+  </section>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <div class="toast ta" aria-hidden="true">Обнимаю тебя крепко</div>
+  <div class="toast tb" aria-hidden="true">Люблю тебя</div>
+</main>
+
+<nav class="tabs" aria-label="Разделы">
+  <label class="tab" for="t-card">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M4 7.5l8 6 8-6"/></svg>
+    Открытка
+  </label>
+  <label class="tab" for="t-reasons">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.5l-1.2-1.1C6 15.2 3 12.5 3 9a4.5 4.5 0 0 1 4.5-4.5c1.7 0 3.4.8 4.5 2.1 1.1-1.3 2.8-2.1 4.5-2.1A4.5 4.5 0 0 1 21 9c0 3.5-3 6.2-7.8 10.4z"/></svg>
+    Причины
+    <svg class="badge" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+  </label>
+  <label class="tab" for="t-letter">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h8.5L19 7.5V21H6z"/><path d="M9 12h7M9 16h7"/></svg>
+    Письмо
+    <svg class="badge" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+  </label>
+</nav>
+
+<script>
+/* Opens the reasons and the letter on 14 October (the page is locked until this script says otherwise),
+   and adds the countdown, the card counter and the animated hearts. */
+(function () {
+  'use strict';
+  var root = document.documentElement;
+  function $(id) { return document.getElementById(id); }
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* Lock until 14 October 2026, 00:00 local time */
+  var UNLOCK = new Date(2026, 9, 14).getTime();
+  var preview = false;
+  function plural(n, f) {
+    var a = n % 10, b = n % 100;
+    if (a === 1 && b !== 11) return f[0];
+    if (a >= 2 && a <= 4 && (b < 10 || b >= 20)) return f[1];
+    return f[2];
+  }
+  function isLocked() { return !preview && Date.now() < UNLOCK; }
+  function countdownText() {
+    var now = new Date();
+    var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    var target = new Date(now.getFullYear(), 9, 14);
+    var d = Math.round((target - today) / 864e5);
+    if (d < 0) d = Math.round((new Date(now.getFullYear() + 1, 9, 14) - today) / 864e5);
+    if (d === 0) return 'Сегодня твой день';
+    if (d > 330) return 'Спасибо, что ты есть каждый день';
+    var word = (d % 10 === 1 && d % 100 !== 11) ? 'Остался' : 'Осталось';
+    return word + ' ' + d + ' ' + plural(d, ['день', 'дня', 'дней']) + ' до праздника';
+  }
+  function pad(n) { return n < 10 ? '0' + n : String(n); }
+  var units = [
+    ['d', ['день', 'дня', 'дней']],
+    ['h', ['час', 'часа', 'часов']],
+    ['m', ['минута', 'минуты', 'минут']],
+    ['s', ['секунда', 'секунды', 'секунд']]
+  ];
+  function tick() {
+    var ms = UNLOCK - Date.now();
+    if (ms <= 0) { if (!root.classList.contains('open')) refresh(); return; }
+    var total = Math.floor(ms / 1000);
+    var v = { d: Math.floor(total / 86400), h: Math.floor((total % 86400) / 3600), m: Math.floor((total % 3600) / 60), s: total % 60 };
+    units.forEach(function (u) {
+      var num = pad(v[u[0]]), word = plural(v[u[0]], u[1]);
+      Array.prototype.forEach.call(document.querySelectorAll('.t-' + u[0]), function (el) { el.textContent = num; });
+      Array.prototype.forEach.call(document.querySelectorAll('.l-' + u[0]), function (el) { el.textContent = word; });
+    });
+  }
+  function refresh() {
+    if (isLocked()) root.classList.remove('open'); else root.classList.add('open');
+    $('count').textContent = countdownText();
+  }
+  root.classList.add('js');
+  try { refresh(); tick(); } catch (e) {}
+  setInterval(function () { try { tick(); } catch (e) {} }, 1000);
+  setInterval(function () { try { refresh(); } catch (e) {} }, 30000);
+
+  /* Back to the top of a screen after switching tabs */
+  Array.prototype.forEach.call(document.querySelectorAll('input[name="tab"]'), function (r) {
+    r.addEventListener('change', function () {
+      Array.prototype.forEach.call(document.querySelectorAll('.screen'), function (s) { s.scrollTop = 0; });
+    });
+  });
+
+  /* Card counter */
+  var flips = document.querySelectorAll('.flip');
+  function updateProgress() {
+    var n = document.querySelectorAll('.flip:checked').length;
+    $('progress').textContent = 'Открыто ' + n + ' из ' + flips.length + (n < flips.length ? '. Нажимай на карточки.' : '.');
+    if (n === flips.length) $('s-reasons').classList.add('all-open'); else $('s-reasons').classList.remove('all-open');
+  }
+  Array.prototype.forEach.call(flips, function (f) { f.addEventListener('change', updateProgress); });
+  updateProgress();
+
+  /* Hugs */
+  var heartPath = 'M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z';
+  var cheers = ['Обнимаю тебя крепко', 'Ты у меня самая лучшая', 'Люблю тебя', 'Спасибо тебе за всё'];
+  var cheerIdx = 0, toastTimer = null;
+  function toast(text) {
+    var t = $('toast');
+    t.textContent = text;
+    t.classList.add('on');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { t.classList.remove('on'); }, 2200);
+  }
+  function hug() {
+    toast(cheers[cheerIdx++ % cheers.length]);
+    if (reduce) return;
+    var layer = $('hearts');
+    for (var i = 0; i < 16; i++) {
+      var h = document.createElement('span');
+      var dur = 2.4 + Math.random() * 1.8, wait = Math.random() * 0.5;
+      h.className = 'heart h' + (i % 3);
+      h.style.left = (8 + Math.random() * 82) + '%';
+      h.style.setProperty('--s', (18 + Math.random() * 22).toFixed(0) + 'px');
+      h.style.setProperty('--d', dur.toFixed(2) + 's');
+      h.style.setProperty('--w', wait.toFixed(2) + 's');
+      h.style.setProperty('--x', ((Math.random() - 0.5) * 70).toFixed(0) + 'px');
+      h.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="' + heartPath + '"/></svg>';
+      layer.appendChild(h);
+      (function (el, ms) { setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, ms); })(h, (dur + wait) * 1000 + 200);
+    }
+  }
+  ['hugA', 'hugB'].forEach(function (id) {
+    var r = $(id);
+    r.addEventListener('change', function () { r.checked = false; hug(); });
+  });
+
+  /* Sender's preview: tap the date line five times to read the wishes early. */
+  var taps = 0, tapTimer = null;
+  $('eyebrow').addEventListener('click', function () {
+    taps++;
+    clearTimeout(tapTimer);
+    tapTimer = setTimeout(function () { taps = 0; }, 1500);
+    if (taps >= 5) {
+      taps = 0;
+      preview = !preview;
+      toast(preview ? 'Просмотр до праздника включён' : 'Просмотр выключен');
+      refresh();
+    }
+  });
+})();
+</script>
+</body>
+</html>
